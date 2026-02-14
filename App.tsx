@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Peer, { DataConnection } from 'peerjs';
+import Peer, { DataConnection, MediaConnection } from 'peerjs';
 import { 
   Player, PlayerColor, BoardState, GamePhase, 
   DiceRoll, MoveResultType, MoveOption, GameLog, BoardShell, GameMode, NetworkPacket
@@ -23,6 +23,17 @@ const AVATAR_LIST = [
   "https://lh3.googleusercontent.com/d/1BAHhH5v5XryIhWgdRSOSJfsy8u8BwlDT"
 ];
 
+const PEER_CONFIG = {
+  debug: 1,
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+    ]
+  }
+};
+
 const generatePlayers = (
     p1Settings: { name: string, color: string, avatar?: string },
     p2Settings: { name: string, color: string, avatar?: string }
@@ -44,7 +55,7 @@ const triggerHaptic = (pattern: number | number[]) => {
 };
 
 const generateShortCode = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No confusing O, 0, I, 1
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
     let result = '';
     for (let i = 0; i < 6; i++) {
         result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -193,13 +204,30 @@ const App: React.FC = () => {
   const [joinCodeInput, setJoinCodeInput] = useState<string>('');
   const [isPeerConnecting, setIsPeerConnecting] = useState(false);
   const [onlineLobbyStatus, setOnlineLobbyStatus] = useState<'IDLE' | 'WAITING' | 'CONNECTED'>('IDLE');
+  
+  // Voice State
   const [isMicActive, setIsMicActive] = useState(false);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const activeMediaCallsRef = useRef<MediaConnection[]>([]);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     connectionsRef.current = activeConnections;
   }, [activeConnections]);
+
+  // Robustly attach stream to hidden audio element
+  useEffect(() => {
+    if (remoteAudioRef.current && remoteStream) {
+        console.log("Attaching remote stream to audio element...");
+        remoteAudioRef.current.srcObject = remoteStream;
+        // Some browsers require explicit play()
+        remoteAudioRef.current.play().catch(err => {
+            console.warn("Audio element play() failed, likely autoplay restriction:", err);
+            addLog("Click board to enable opponent audio.", "info");
+        });
+    }
+  }, [remoteStream]);
 
   const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa, lastRoll, winner });
   
@@ -228,7 +256,6 @@ const App: React.FC = () => {
     }
   }, [broadcastPacket]);
 
-  // Host auto-broadcast effect
   useEffect(() => {
     if (gameMode === GameMode.ONLINE_HOST) {
         const timeout = setTimeout(broadcastFullSync, 100);
@@ -253,6 +280,12 @@ const App: React.FC = () => {
   const resetToLobby = useCallback(() => {
     triggerHaptic(20);
     if (peer) peer.destroy();
+    if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(t => t.stop());
+        localStreamRef.current = null;
+    }
+    setRemoteStream(null);
+    setIsMicActive(false);
     setGameMode(null);
     gameModeRef.current = null;
     setOnlineLobbyStatus('IDLE');
@@ -359,7 +392,6 @@ const App: React.FC = () => {
             SFX.playKill(); triggerHaptic([70, 50, 70]);
             const eIdx = players.findIndex(p => p.id === target.owner); if (eIdx !== -1) newPlayers[eIdx].coinsInHand += target.stackSize; 
             
-            // Killer Bonus Logic: if killing a Sho-mo (or in first round), replace with 3 coins if possible
             let finalStackSize = movingStackSize;
             if (target.isShoMo && newPlayers[s.turnIndex].coinsInHand > 0) {
               const additionalNeeded = 3 - movingStackSize;
@@ -417,7 +449,6 @@ const App: React.FC = () => {
             let guestColor = packet.payload.color;
             const guestAvatar = packet.payload.avatar;
 
-            // Conflict resolution for Host
             const myColor = gameStateRef.current.players[0].colorHex;
             if (guestColor === myColor) {
                 const alt = COLOR_PALETTE.find(c => c.hex !== myColor);
@@ -430,7 +461,6 @@ const App: React.FC = () => {
             setPlayers(prev => {
                 const next = [...prev];
                 next[1] = { ...next[1], name: guestName, colorHex: guestColor, avatarUrl: guestAvatar };
-                // Send host info back to guest for mutual sync
                 broadcastPacket({ 
                     type: 'JOIN_INFO', 
                     payload: { name: next[0].name, color: next[0].colorHex, avatar: next[0].avatarUrl } 
@@ -447,12 +477,11 @@ const App: React.FC = () => {
                 const next = [...prev];
                 next[0] = { ...next[0], name: hostName, colorHex: hostColor, avatarUrl: hostAvatar };
                 
-                // Conflict resolution for Guest
                 if (next[1].colorHex === hostColor) {
                     const alt = COLOR_PALETTE.find(c => c.hex !== hostColor);
                     if (alt) {
                         next[1].colorHex = alt.hex;
-                        setSelectedColor(alt.hex); // Sync lobby UI state
+                        setSelectedColor(alt.hex);
                         addLog("Local color adjusted to avoid conflict.", "info");
                     }
                 }
@@ -492,12 +521,12 @@ const App: React.FC = () => {
         if (packet.payload.lastRoll) setLastRoll(packet.payload.lastRoll);
         break;
     }
-  }, [performRoll, performMove, handleSkipTurn, broadcastPacket]);
+  }, [performRoll, performMove, handleSkipTurn, broadcastPacket, addLog]);
 
   const startOnlineHost = () => {
     setIsPeerConnecting(true);
     const shortCode = generateShortCode();
-    const newPeer = new Peer(shortCode);
+    const newPeer = new Peer(shortCode, PEER_CONFIG);
     setPeer(newPeer);
     
     newPeer.on('open', (id) => {
@@ -505,17 +534,25 @@ const App: React.FC = () => {
       setIsPeerConnecting(false);
       addLog(`Room code: ${id}. Share it!`, 'info');
     });
+
+    newPeer.on('call', (call) => {
+        console.log("Answering incoming call from peer:", call.peer);
+        // Answer with the current local stream if mic is active
+        call.answer(localStreamRef.current || undefined);
+        call.on('stream', (stream) => {
+            console.log("Receiving remote stream...");
+            setRemoteStream(stream);
+        });
+        activeMediaCallsRef.current.push(call);
+    });
     
     newPeer.on('connection', (conn) => {
       conn.on('open', () => {
         setActiveConnections(prev => [...prev, conn]);
         setOnlineLobbyStatus('CONNECTED');
-        
-        // NOW transition to game mode
         setGameMode(GameMode.ONLINE_HOST);
         gameModeRef.current = GameMode.ONLINE_HOST;
         initializeGame({ name: getSafePlayerName(), color: selectedColor, avatar: selectedAvatar }, { name: 'Opponent...', color: '#3b82f6' });
-        
         addLog("Peer connected!", 'info');
       });
       conn.on('data', (data: any) => handleNetworkPacket(data));
@@ -523,12 +560,12 @@ const App: React.FC = () => {
     });
     
     newPeer.on('error', (err) => {
-      console.error(err);
+      console.error("PeerJS Host Error:", err);
       setIsPeerConnecting(false);
       if (err.type === 'unavailable-id') {
           startOnlineHost();
       } else {
-          addLog("Host connection error.", "alert");
+          addLog(`Connection error: ${err.type}`, "alert");
       }
     });
   };
@@ -536,11 +573,28 @@ const App: React.FC = () => {
   const joinOnlineMatch = (code: string) => {
     if (!code || code.length < 4) return;
     setIsPeerConnecting(true);
-    const newPeer = new Peer();
+    const newPeer = new Peer(PEER_CONFIG);
     setPeer(newPeer);
+
+    newPeer.on('error', (err) => {
+        console.error("PeerJS Guest Error:", err);
+        setIsPeerConnecting(false);
+        addLog(`Network Error: ${err.type}`, "alert");
+    });
+
+    newPeer.on('call', (call) => {
+        console.log("Answering incoming call from peer:", call.peer);
+        call.answer(localStreamRef.current || undefined);
+        call.on('stream', (stream) => {
+            console.log("Receiving remote stream...");
+            setRemoteStream(stream);
+        });
+        activeMediaCallsRef.current.push(call);
+    });
     
-    newPeer.on('open', () => {
+    newPeer.on('open', (id) => {
       const conn = newPeer.connect(code.toUpperCase());
+      
       conn.on('open', () => {
         setActiveConnections(prev => [...prev, conn]);
         setOnlineLobbyStatus('CONNECTED');
@@ -553,22 +607,18 @@ const App: React.FC = () => {
             return next;
         });
 
-        addLog("Syncing names...", 'info');
+        addLog("Syncing profile...", 'info');
         conn.send({ type: 'JOIN_INFO', payload: { name: getSafePlayerName(), color: selectedColor, avatar: selectedAvatar } });
       });
+
       conn.on('data', (data: any) => handleNetworkPacket(data));
+      conn.on('close', () => resetToLobby());
+      
       conn.on('error', (err) => {
-          console.error(err);
+          console.error("Guest Data Connection Error:", err);
           setIsPeerConnecting(false);
           addLog("Could not connect to room.", "alert");
       });
-      conn.on('close', () => resetToLobby());
-    });
-
-    newPeer.on('error', (err) => {
-        console.error(err);
-        setIsPeerConnecting(false);
-        addLog("Network communication error.", "alert");
     });
   };
 
@@ -618,16 +668,35 @@ const App: React.FC = () => {
         localStreamRef.current.getTracks().forEach(track => track.stop());
         localStreamRef.current = null;
       }
+      activeMediaCallsRef.current.forEach(call => call.close());
+      activeMediaCallsRef.current = [];
       setIsMicActive(false);
+      setRemoteStream(null);
+      addLog("Mic off.", "info");
     } else {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         localStreamRef.current = stream;
         setIsMicActive(true);
         addLog("Mic on.", "info");
+
+        // Initiate call to opponent with our new stream
+        if (peer) {
+            connectionsRef.current.forEach(conn => {
+                if (conn.open) {
+                    console.log("Initiating call to peer:", conn.peer);
+                    const call = peer.call(conn.peer, stream);
+                    call.on('stream', (remoteS) => {
+                        console.log("Receiving response stream from called peer...");
+                        setRemoteStream(remoteS);
+                    });
+                    activeMediaCallsRef.current.push(call);
+                }
+            });
+        }
       } catch (err) {
-        console.error("Mic error:", err);
-        addLog("Could not access mic.", "alert");
+        console.error("Mic access error:", err);
+        addLog("Microphone access denied.", "alert");
       }
     }
   };
@@ -667,7 +736,9 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-stone-900 text-stone-100' : 'bg-stone-100 text-stone-900'} flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row transition-colors duration-500`}>
-        {remoteStream && <audio autoPlay ref={el => { if (el) el.srcObject = remoteStream; }} />}
+        {/* Remote Audio Element - must be in DOM and autoPlay/playsInline for browser compatibility */}
+        <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
+        
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes handBlockedShake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
           .animate-hand-blocked { animation: handBlockedShake 0.4s ease-in-out; border-color: #ef4444 !important; background-color: rgba(127, 29, 29, 0.4) !important; }
@@ -1178,7 +1249,12 @@ const App: React.FC = () => {
                         )}
                     </div>
                 </div>
-                <div className={`flex-grow relative ${isDarkMode ? 'bg-[#1a1715]' : 'bg-[#fcfaf9]'} flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board transition-colors duration-500`} ref={boardContainerRef}>
+                <div className={`flex-grow relative ${isDarkMode ? 'bg-[#1a1715]' : 'bg-[#fcfaf9]'} flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board transition-colors duration-500`} ref={boardContainerRef} onClick={() => {
+                    // Unlock audio on board click just in case of autoplay restrictions
+                    if (remoteAudioRef.current && remoteAudioRef.current.paused && remoteStream) {
+                        remoteAudioRef.current.play().catch(() => {});
+                    }
+                }}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
                             boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => { if (isLocalTurn) performMove(m.sourceIndex, m.targetIndex); }} 
