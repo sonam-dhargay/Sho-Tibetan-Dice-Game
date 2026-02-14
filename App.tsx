@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { 
@@ -176,7 +177,7 @@ const App: React.FC = () => {
   const [isPro, setIsPro] = useState(false);
   const [isLoginGateOpen, setIsLoginGateOpen] = useState(false);
   const [isProUpgradeOpen, setIsProUpgradeOpen] = useState(false);
-  const [authForm, setAuthForm] = useState({ email: '', password: '', confirmPassword: '', firstName: '', lastName: '' });
+  const [authForm, setAuthForm] = useState({ email: '', password: '', firstName: '', lastName: '' });
 
   const getSafePlayerName = () => {
     if (isLoggedIn && authForm.firstName) {
@@ -413,8 +414,19 @@ const App: React.FC = () => {
       case 'JOIN_INFO':
         if (gameModeRef.current === GameMode.ONLINE_HOST) {
             const guestName = packet.payload.name;
-            const guestColor = packet.payload.color;
+            let guestColor = packet.payload.color;
             const guestAvatar = packet.payload.avatar;
+
+            // Conflict resolution for Host
+            const myColor = gameStateRef.current.players[0].colorHex;
+            if (guestColor === myColor) {
+                const alt = COLOR_PALETTE.find(c => c.hex !== myColor);
+                if (alt) {
+                    guestColor = alt.hex;
+                    addLog("Guest color adjusted to avoid conflict.", "info");
+                }
+            }
+
             setPlayers(prev => {
                 const next = [...prev];
                 next[1] = { ...next[1], name: guestName, colorHex: guestColor, avatarUrl: guestAvatar };
@@ -430,9 +442,20 @@ const App: React.FC = () => {
             const hostName = packet.payload.name;
             const hostColor = packet.payload.color;
             const hostAvatar = packet.payload.avatar;
+            
             setPlayers(prev => {
                 const next = [...prev];
                 next[0] = { ...next[0], name: hostName, colorHex: hostColor, avatarUrl: hostAvatar };
+                
+                // Conflict resolution for Guest
+                if (next[1].colorHex === hostColor) {
+                    const alt = COLOR_PALETTE.find(c => c.hex !== hostColor);
+                    if (alt) {
+                        next[1].colorHex = alt.hex;
+                        setSelectedColor(alt.hex); // Sync lobby UI state
+                        addLog("Local color adjusted to avoid conflict.", "info");
+                    }
+                }
                 return next;
             });
             addLog(`Opponent: ${hostName}`, 'info');
