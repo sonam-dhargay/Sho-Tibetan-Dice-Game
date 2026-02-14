@@ -221,10 +221,10 @@ const App: React.FC = () => {
     if (remoteAudioRef.current && remoteStream) {
         console.log("Attaching remote stream to audio element...");
         remoteAudioRef.current.srcObject = remoteStream;
-        // Some browsers require explicit play()
+        // Attempt to play, though it might be blocked initially
         remoteAudioRef.current.play().catch(err => {
-            console.warn("Audio element play() failed, likely autoplay restriction:", err);
-            addLog("Click board to enable opponent audio.", "info");
+            console.warn("Audio element play() failed initially, likely autoplay restriction:", err);
+            addLog("Click the board to enable audio chat.", "info");
         });
     }
   }, [remoteStream]);
@@ -537,7 +537,7 @@ const App: React.FC = () => {
 
     newPeer.on('call', (call) => {
         console.log("Answering incoming call from peer:", call.peer);
-        // Answer with the current local stream if mic is active
+        // Answer with our stream if active, otherwise answer empty (to receive)
         call.answer(localStreamRef.current || undefined);
         call.on('stream', (stream) => {
             console.log("Receiving remote stream...");
@@ -736,7 +736,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-stone-900 text-stone-100' : 'bg-stone-100 text-stone-900'} flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row transition-colors duration-500`}>
-        {/* Remote Audio Element - must be in DOM and autoPlay/playsInline for browser compatibility */}
+        {/* Hidden Remote Audio Element - must be in DOM with autoPlay/playsInline */}
         <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
         
         <style dangerouslySetInnerHTML={{__html: `
@@ -1250,9 +1250,14 @@ const App: React.FC = () => {
                     </div>
                 </div>
                 <div className={`flex-grow relative ${isDarkMode ? 'bg-[#1a1715]' : 'bg-[#fcfaf9]'} flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board transition-colors duration-500`} ref={boardContainerRef} onClick={() => {
-                    // Unlock audio on board click just in case of autoplay restrictions
-                    if (remoteAudioRef.current && remoteAudioRef.current.paused && remoteStream) {
-                        remoteAudioRef.current.play().catch(() => {});
+                    // Critical for mobile/Safari: resume audio context and play remote audio on user interaction
+                    if (remoteAudioRef.current && remoteStream) {
+                        remoteAudioRef.current.play().catch(() => {
+                            console.log("Audio play failed on click, still restricted.");
+                        });
+                    }
+                    if (SFX.ctx && SFX.ctx.state === 'suspended') {
+                        SFX.ctx.resume();
                     }
                 }}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
