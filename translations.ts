@@ -74,7 +74,7 @@ export const T = {
   pro: {
     title: { en: "PRO ACCESS", bo: "PRO མཁས་དབང་།" },
     desc: { en: "Play Sho with voice, banter, and tradition.", bo: "ཀུ་རེ་དང་བཞད་གད་སྲོལ་རྒྱུན་གྱི་ཉམས་དང་ལྡན་པའི་གོ་ནས་ཤོ་རྩེད་ལ་རོལ་ཅིག" },
-    feat1: { en: "Unlimited Multi-Player Matches", bo: "ཚོད་འཛིན་མེད་པའི་གྲངས་མང་གི་རྩེད་མོའི་འགྲན།" },
+    feat1: { en: "Unlimited Multi-Player Matches", bo: "ཚོད་འཛིན་མེད་པའི་གྲངས་མང་གི་རྩེད་མོའི་འགྲན་རྩོད།" },
     feat2: { en: "Live Voice Chat (Microphone)", bo: "སྐད་པར་རྒྱུད་ཐད་གཏོང་གླེང་མོལ།" },
     feat3: { en: "Cloud Progress Sync", bo: "སྤྲིན་ཚོགས་སྟེང་རྩེད་གྲངས་ཉར་ཚགས།" },
     feat4: { en: "Exclusive Gold Piece Skins", bo: "དམིགས་བསལ་གསེར་གྱི་ལག་ཁྱི།" },
@@ -83,7 +83,7 @@ export const T = {
     notNow: { en: "Not Now", bo: "ད་ལྟ་མིན།" },
     supportMsg: { 
         en: "Your support helps sustain the development of Tibetan-language digital cultural projects.", 
-        bo: "ཁྱེད་ཀྱི་རྒྱབ་སྐྱོར་གྱིས་བོད་ཡིག་གི་གྲངས་རིག་རིག་གནས་ལས་གཞི་གོང་འཕེལ་གཏོང་བར་རོགས་རམ་བྱེད་ཀྱི་ཡོད།" 
+        bo: "སྐུ་ཉིད་ཀྱི་རྒྱབ་སྐྱོར་ལ་རྟེན་ནས་་བོད་སྐད་ཀྱི་རྩིས་འཁོར་ལས་གཞི་གོང་འཕེལ་གཏོང་རྒྱུར་ཕན་ཐོགས་ཡོང་ངེས་ལགས།" 
     }
   },
   game: {
