@@ -892,9 +892,13 @@ const App: React.FC = () => {
                   <span className="uppercase tracking-[0.3em]">{T.pro.upgrade.en}</span>
                   <span className="font-serif text-sm mt-0.5">{T.pro.upgrade.bo}</span>
                 </button>
-                <button onClick={() => { triggerHaptic(10); setIsProUpgradeOpen(false); }} className={`mt-8 ${isDarkMode ? 'text-stone-500 hover:text-white' : 'text-stone-400 hover:text-stone-900'} uppercase text-[10px] tracking-widest font-bold transition-colors`}>
+                <button onClick={() => { triggerHaptic(10); setIsProUpgradeOpen(false); }} className={`mt-6 ${isDarkMode ? 'text-stone-500 hover:text-white' : 'text-stone-400 hover:text-stone-900'} uppercase text-[10px] tracking-widest font-bold transition-colors`}>
                   {T.pro.notNow.en} <span className="font-serif ml-1">{T.pro.notNow.bo}</span>
                 </button>
+                <div className="mt-8 pt-6 border-t border-stone-800 w-full text-center">
+                  <p className="text-[10px] text-stone-500 italic leading-relaxed">{T.pro.supportMsg.en}</p>
+                  <p className="text-[11px] font-serif text-stone-600 mt-1 leading-relaxed">{T.pro.supportMsg.bo}</p>
+                </div>
               </div>
             </div>
           </div>

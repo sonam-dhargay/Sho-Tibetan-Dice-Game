@@ -1,3 +1,4 @@
+
 export const T = {
   common: {
     back: { en: "Back", bo: "ཕྱིར་ལོག།" },
@@ -79,7 +80,11 @@ export const T = {
     feat4: { en: "Exclusive Gold Piece Skins", bo: "དམིགས་བསལ་གསེར་གྱི་ལག་ཁྱི།" },
     feat5: { en: "Ad-Free Experience", bo: "ཁྱབ་བསྒྲགས་མེད་པའི་ཁོར་ཡུག" },
     upgrade: { en: "Upgrade Now ($2.99)", bo: "ད་ལྟ་རང་རིམ་པ་སྤོར། ($2.99)" },
-    notNow: { en: "Not Now", bo: "ད་ལྟ་མིན།" }
+    notNow: { en: "Not Now", bo: "ད་ལྟ་མིན།" },
+    supportMsg: { 
+        en: "Your support helps sustain the development of Tibetan-language digital cultural projects.", 
+        bo: "ཁྱེད་ཀྱི་རྒྱབ་སྐྱོར་གྱིས་བོད་ཡིག་གི་གྲངས་རིག་རིག་གནས་ལས་གཞི་གོང་འཕེལ་གཏོང་བར་རོགས་རམ་བྱེད་ཀྱི་ཡོད།" 
+    }
   },
   game: {
     inHand: { en: "In", bo: "ལག་ཐོག།" },
@@ -102,7 +107,7 @@ export const T = {
     title: { en: "Game Rules", bo: "ཤོའི་སྒྲིག་གཞི།" },
     aboutTitle: { en: "Sho — Traditional Tibetan Dice Game", bo: "ཤོ — བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།" },
     aboutDesc1: { en: "Sho (Tibetan: ཤོ) is a traditional Tibetan race game that remains widely played today. Its name simply means “dice” in Tibetan.", bo: "ཤོ་ནི་བོད་ཀྱི་སྲོལ་རྒྱུན་གྱི་རྩེད་མོ་ཞིག་ཡིན་ལ། དེང་སང་ཡང་ཡོངས་ཁྱབ་ཏུ་རྩེ་བཞིན་ཡོད། 'ཤོ་'ཞེས་པའི་མིང་ཚིག་འདི་ནི་བོད་སྐད་དུ་ཤོ་རང་ལ་གོ་བ་རེད།" },
-    aboutDesc2: { en: "The game is played by two (gnyis ‘dzing) to four players (cha gzing), with three players (gsum gdzing) being the most common arrangement.", bo: "རྩེད་མོ་འདི་རྩེད་མོ་བ་གཉིས་ནས་བཞི་བར་རྩེ་ཆོག་ཅིང་། ཉིས་འཛིང་དང་ཆ་འཛིང་། གསུམ་འཛིང་བཅས་ཡོད། རྩེད་མོ་བ་གསུམ་གྱིས་རྩེ་བ་ནི་མང་ཤོས་རེད།" },
+    aboutDesc2: { en: "The game is played by two (gnyis ‘dzing) to four players (cha gzing), with three players (gsum gdzing) being the most common arrangement.", bo: "རྩེད་མོ་འདི་རྩེད་མོ་བ་ gnyis ནས་བཞི་བར་རྩེ་ཆོག་ཅིང་། ཉིས་འཛིང་དང་ཆ་འཛིང་། གསུམ་འཛིང་བཅས་ཡོད། རྩེད་མོ་བ་གསུམ་གྱིས་རྩེ་བ་ནི་མང་ཤོས་རེད།" },
     equipmentTitle: { en: "Equipment", bo: "མཁོ་ཆས།" },
     equipmentDesc1: { en: "The Sho board is formed by a circular spiral of shells (rde’u), typically sixty-four in number.", bo: "ཤོ་རྩེད་ས་ནི་ཅོག་རྩེ་འམ་ས་སྟེང་གི་གདན་ཐོག་་རྡེའུ་ ༦༤ གཡས་སྐོར་བྱེད་དེ་བསྒྲིགས་པ་ཞིག་ཡོད།" },
     equipmentDesc2: { en: "Each player—or team—has nine identical playing pieces (lag kyi), traditionally old coins.", bo: "རྩེད་མོ་བ་རེར་ལག་ཁྱི་ ༩ རེ་ཡོད་པ་དང་། སྲོལ་རྒྱུན་དུ་ཊམ་ཀ་རྙིང་པ་བཀོལ་གྱི་ཡོད།" },
